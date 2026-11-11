@@ -12,6 +12,7 @@ import {
 import { dvValido } from "@/lib/ocr/nit";
 import type { ParcialFactura } from "@/lib/ocr/tipos";
 import { OPCIONES_TRANSACCION, TERMINADO } from "./cola";
+import { aplicarMetricas } from "./metricas-firestore";
 
 export type DatosArchivo = {
   referencia: DocumentReference;
@@ -56,6 +57,7 @@ export function guardarFactura(entrada: {
   const refCliente = documentoValido
     ? db.collection(COLECCIONES.clientes).doc(documentoValido)
     : null;
+  const refProceso = db.collection(COLECCIONES.procesos).doc(proceso.id);
 
   return db.runTransaction(async (transaccion) => {
     // Firestore exige todas las lecturas antes de la primera escritura.
@@ -68,6 +70,7 @@ export function guardarFactura(entrada: {
         archivo.referencia,
         cierreDeArchivo({ resultado: "duplicada", hashArchivo: hash }),
       );
+      aplicarMetricas(transaccion, refProceso, { tipo: "duplicada" });
       return { resultado: "duplicada", clienteNuevo: false };
     }
 
@@ -129,6 +132,16 @@ export function guardarFactura(entrada: {
         clienteExistente: Boolean(cliente?.exists),
       }),
     );
+    aplicarMetricas(transaccion, refProceso, {
+      tipo: resultado,
+      subtotal: datos.subtotal,
+      iva: datos.iva,
+      impoconsumo: datos.impoconsumo,
+      total: datos.total,
+      nit: datos.nitProveedor,
+      nombre: datos.proveedor,
+      clienteNuevo,
+    });
     return { resultado, clienteNuevo };
   }, OPCIONES_TRANSACCION);
 }
@@ -143,9 +156,11 @@ export function guardarFallo(entrada: {
   const { hash, proceso, archivo, motivo } = entrada;
   const db = baseDeDatos();
   const refFactura = db.collection(COLECCIONES.facturas).doc(hash);
+  const refProceso = db.collection(COLECCIONES.procesos).doc(proceso.id);
 
   return db.runTransaction(async (transaccion) => {
     const factura = await transaccion.get(refFactura);
+    aplicarMetricas(transaccion, refProceso, { tipo: "error" });
     if (!factura.exists) {
       const nuevaFactura: Factura = {
         numero: null,

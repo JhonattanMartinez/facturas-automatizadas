@@ -6,6 +6,7 @@ import path from "node:path";
 import { deleteApp } from "firebase-admin/app";
 import { appFirebase, baseDeDatos } from "@/lib/firebase/admin";
 import { COLECCIONES } from "@/lib/modelo/tipos";
+import type { ResumenProceso } from "@/lib/procesamiento/metricas";
 import { analizarExcel, crearComprobador, iniciarSesion, limpiarLote } from "./comun";
 
 const CANTIDAD = 10;
@@ -114,6 +115,24 @@ async function main(): Promise<void> {
     comprobar("suma de la columna Total = Firestore", sumaFirestore, excel.sumaTotal);
     comprobar("los totales son números, no texto", true, excel.totalesNumericos);
     comprobar("las fechas son fechas, no texto", true, excel.fechasReales);
+
+    const conSesion = { headers: { cookie } };
+    const estado = (await (await fetch(`${url}/api/procesos/${primero.id}`, conSesion)).json()) as ResumenProceso;
+    comprobar("contadores del lote", CANTIDAD, estado.metricas.aceptadas.n + estado.metricas.revision.n + estado.metricas.errores);
+    comprobar("el total aceptado cuadra", true, estado.metricas.aceptadas.total <= sumaFirestore);
+
+    const panel = (await (await fetch(`${url}/api/metricas`, conSesion)).json()) as { procesos: ResumenProceso[]; clientes: number };
+    comprobar("el panel incluye el lote", true, panel.procesos.some((p) => p.id === primero.id));
+    comprobar("el panel cuenta clientes", true, panel.clientes > 0);
+    comprobar("el panel exige sesión", 401, (await fetch(`${url}/api/metricas`)).status);
+    comprobar("buscar lotes en ejecución", 200, (await fetch(`${url}/api/procesos?estado=ejecutando`, conSesion)).status);
+
+    const lista = (await (await fetch(`${url}/api/procesos/${primero.id}/facturas`, conSesion)).json()) as { facturas: { hash: string }[] };
+    comprobar("tabla de facturas del lote", CANTIDAD, lista.facturas.length);
+    const imagen = await fetch(`${url}/api/facturas/${lista.facturas[0].hash}/imagen`, conSesion);
+    comprobar("imagen original", 200, imagen.status);
+    comprobar("se sirve como imagen", true, imagen.headers.get("content-type")?.startsWith("image/") ?? false);
+    comprobar("la imagen exige sesión", 401, (await fetch(`${url}/api/facturas/${lista.facturas[0].hash}/imagen`)).status);
 
     const segundo = await correrLote("prueba-http-2");
     console.log(`      reproceso: ${(segundo.ms / 1000).toFixed(1)} s`);

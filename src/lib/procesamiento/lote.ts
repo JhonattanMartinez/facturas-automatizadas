@@ -14,6 +14,7 @@ import {
   type Reclamado,
 } from "./cola";
 import { guardarFactura, guardarFallo, type DatosProceso } from "./guardar";
+import { aplicarMetricas } from "./metricas-firestore";
 
 // De los 300 s de la función: deja margen para terminar la factura en curso.
 const PRESUPUESTO_MS = 200_000;
@@ -58,13 +59,20 @@ async function procesarArchivo(
       .doc(hash)
       .get();
     if (existente.exists) {
-      await referencia.update({
+      const db = baseDeDatos();
+      // En un lote de escritura: el archivo y su contador se guardan juntos o no se guardan.
+      const escritura = db.batch();
+      escritura.update(referencia, {
         estado: "ok",
         resultado: "duplicada",
         hashArchivo: hash,
         error: null,
         disponibleDesde: TERMINADO,
       });
+      aplicarMetricas(escritura, db.collection(COLECCIONES.procesos).doc(proceso.id), {
+        tipo: "duplicada",
+      });
+      await escritura.commit();
       return "duplicada";
     }
 

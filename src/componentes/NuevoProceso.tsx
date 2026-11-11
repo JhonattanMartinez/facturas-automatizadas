@@ -1,20 +1,23 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import { totalProcesadas } from "@/lib/procesamiento/metricas";
+import { formatoEntero, formatoTamano } from "./formato";
+import { ListaProcesos } from "./ListaProcesos";
+import { ResumenEnVivo } from "./ResumenEnVivo";
+import { Barra, CLASE_BOTON, CLASE_BOTON_PRINCIPAL, CLASE_CAMPO, Tarjeta } from "./ui";
+import { EVENTO_LOTE_INICIADO, useMetricas } from "./useMetricas";
 
 const CONCURRENCIA = 6;
 const INTENTOS = 3;
 const POR_LOTE_INICIAL = 100;
+const LECTURAS_POR_FACTURA = 5;
 
 type AvanceLote = { id: string; nombre: string; total: number; subidas: number };
 type Tarea = { archivo: File; procesoId: string; indice: number };
-type Fallo = Tarea & { motivo: string };
+type Fallo = { archivo: File; motivo: string };
 
 const esperar = (ms: number) => new Promise((listo) => setTimeout(listo, ms));
-
-function formatoTamano(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-}
 
 /** Devuelve null si subió, o el motivo por el que no se pudo. */
 async function subirArchivo({ archivo, procesoId, indice }: Tarea): Promise<string | null> {
@@ -51,10 +54,8 @@ async function enParalelo<T>(tareas: T[], hacer: (tarea: T) => Promise<void>) {
   );
 }
 
-const claseBoton =
-  "cursor-pointer rounded border border-current px-3 py-2 font-medium focus-within:ring-2";
-
 export function NuevoProceso() {
+  const { datos } = useMetricas();
   const [archivos, setArchivos] = useState<File[]>([]);
   const [carpeta, setCarpeta] = useState("");
   const [porLote, setPorLote] = useState(POR_LOTE_INICIAL);
@@ -78,22 +79,44 @@ export function NuevoProceso() {
   const tamanoLote = porLote > 0 ? porLote : archivos.length || 1;
   const numeroLotes = Math.ceil(archivos.length / tamanoLote);
   const tamanoTotal = archivos.reduce((suma, archivo) => suma + archivo.size, 0);
+  const procesosDeLaSubida =
+    datos?.procesos.filter((p) => lotes.some((lote) => lote.id === p.id)) ?? [];
 
-  async function procesarTareas(tareas: Tarea[]): Promise<Fallo[]> {
-    const nuevos: Fallo[] = [];
+  /** Crea un lote, sube sus imágenes y lo inicia. No espera a que se procese. */
+  async function subirLote(trozo: File[], nombre: string): Promise<Fallo[]> {
+    const creado = await fetch("/api/procesos", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ carpeta: nombre, totalArchivos: trozo.length }),
+    });
+    if (!creado.ok) throw new Error(`No se pudo crear el lote (error ${creado.status})`);
+    const { id } = (await creado.json()) as { id: string };
+    setLotes((actuales) => [...actuales, { id, nombre, total: trozo.length, subidas: 0 }]);
+
+    const fallidos: Fallo[] = [];
+    const tareas = trozo.map((archivo, posicion) => ({
+      archivo,
+      procesoId: id,
+      indice: posicion + 1,
+    }));
     await enParalelo(tareas, async (tarea) => {
       const motivo = await subirArchivo(tarea);
       if (motivo) {
-        nuevos.push({ ...tarea, motivo });
+        fallidos.push({ archivo: tarea.archivo, motivo });
         return;
       }
       setLotes((actuales) =>
-        actuales.map((lote) =>
-          lote.id === tarea.procesoId ? { ...lote, subidas: lote.subidas + 1 } : lote,
-        ),
+        actuales.map((lote) => (lote.id === id ? { ...lote, subidas: lote.subidas + 1 } : lote)),
       );
     });
-    return nuevos;
+
+    if (fallidos.length < trozo.length) {
+      const iniciado = await fetch(`/api/procesos/${id}/iniciar`, { method: "POST" });
+      if (!iniciado.ok) throw new Error(`No se pudo iniciar el lote (error ${iniciado.status})`);
+      // Aquí se separa subir de procesar: el motor toma el lote y seguimos con el siguiente.
+      window.dispatchEvent(new CustomEvent(EVENTO_LOTE_INICIADO, { detail: id }));
+    }
+    return fallidos;
   }
 
   async function subirTodo() {
@@ -106,29 +129,9 @@ export function NuevoProceso() {
       for (let i = 0; i < numeroLotes; i++) {
         const trozo = archivos.slice(i * tamanoLote, (i + 1) * tamanoLote);
         const nombre = numeroLotes > 1 ? `${carpeta} (${i + 1} de ${numeroLotes})` : carpeta;
-        const respuesta = await fetch("/api/procesos", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ carpeta: nombre, totalArchivos: trozo.length }),
-        });
-        if (!respuesta.ok) throw new Error(`No se pudo crear el lote (error ${respuesta.status})`);
-        const { id } = (await respuesta.json()) as { id: string };
-
-        setLotes((actuales) => [
-          ...actuales,
-          { id, nombre, total: trozo.length, subidas: 0 },
-        ]);
-        pendientes.push(
-          ...(await procesarTareas(
-            trozo.map((archivo, posicion) => ({
-              archivo,
-              procesoId: id,
-              indice: posicion + 1,
-            })),
-          )),
-        );
+        pendientes.push(...(await subirLote(trozo, nombre)));
+        setFallos([...pendientes]);
       }
-      setFallos(pendientes);
     } catch (causa) {
       setError(causa instanceof Error ? causa.message : "No se pudo subir la carpeta");
     } finally {
@@ -136,106 +139,140 @@ export function NuevoProceso() {
     }
   }
 
+  // Un lote ya iniciado no admite más imágenes: los archivos fallidos van en un lote nuevo.
   async function reintentar() {
     setSubiendo(true);
-    setFallos(await procesarTareas(fallos));
-    setSubiendo(false);
+    setError(null);
+    try {
+      setFallos(await subirLote(fallos.map((fallo) => fallo.archivo), `${carpeta} (reintento)`));
+    } catch (causa) {
+      setError(causa instanceof Error ? causa.message : "No se pudieron reintentar");
+    } finally {
+      setSubiendo(false);
+    }
   }
 
   return (
-    <section className="flex w-full max-w-2xl flex-col gap-4">
-      <div className="flex flex-wrap gap-3">
-        {/* Un input de archivo sin estilo es solo texto: se oculta dentro de una etiqueta con forma de botón. */}
-        <label className={claseBoton}>
-          Elegir carpeta…
-          <input
-            type="file"
-            multiple
-            className="sr-only"
-            disabled={subiendo}
-            onChange={elegir}
-            // @ts-expect-error webkitdirectory no está en los tipos de React, pero los navegadores lo admiten
-            webkitdirectory=""
-          />
-        </label>
-        {/* Algunos navegadores móviles no permiten elegir carpetas. */}
-        <label className={claseBoton}>
-          Elegir archivos…
-          <input
-            type="file"
-            multiple
-            accept=".png,.jpg,.jpeg"
-            className="sr-only"
-            disabled={subiendo}
-            onChange={elegir}
-          />
-        </label>
-      </div>
-
-      {archivos.length > 0 && (
-        <>
-          <p>
-            {archivos.length} imágenes en «{carpeta}», {formatoTamano(tamanoTotal)}.
-          </p>
-          <label className="flex flex-wrap items-center gap-2">
-            Facturas por lote (0 = todo en uno)
+    <div className="flex w-full max-w-4xl flex-col gap-4">
+      <Tarjeta titulo="Nueva carga">
+        <div className="flex flex-wrap gap-3">
+          {/* Un input de archivo sin estilo es solo texto: va oculto dentro de una etiqueta con forma de botón. */}
+          <label className={CLASE_BOTON}>
+            Elegir carpeta…
             <input
-              type="number"
-              min={0}
-              value={porLote}
+              type="file"
+              multiple
+              className="sr-only"
               disabled={subiendo}
-              onChange={(e) => setPorLote(Math.max(0, Math.floor(Number(e.target.value))))}
-              className="w-24 rounded border border-zinc-400 bg-transparent px-2 py-1 dark:border-zinc-600"
+              onChange={elegir}
+              // @ts-expect-error webkitdirectory no está en los tipos de React, pero los navegadores lo admiten
+              webkitdirectory=""
             />
-            <span>= {numeroLotes} lote(s)</span>
           </label>
-          <button
-            type="button"
-            onClick={subirTodo}
-            disabled={subiendo}
-            className="self-start rounded bg-foreground px-3 py-2 font-medium text-background disabled:opacity-50"
-          >
-            {subiendo ? "Subiendo…" : "Subir"}
-          </button>
-        </>
-      )}
+          {/* Algunos navegadores móviles no permiten elegir carpetas. */}
+          <label className={CLASE_BOTON}>
+            Elegir archivos…
+            <input
+              type="file"
+              multiple
+              accept=".png,.jpg,.jpeg"
+              className="sr-only"
+              disabled={subiendo}
+              onChange={elegir}
+            />
+          </label>
+        </div>
 
-      {error && (
-        <p role="alert" className="text-red-700 dark:text-red-400">
-          {error}
-        </p>
-      )}
+        {archivos.length > 0 && (
+          <>
+            <p>
+              {formatoEntero(archivos.length)} imágenes en «{carpeta}», {formatoTamano(tamanoTotal)}.
+            </p>
+            <label className="flex flex-wrap items-center gap-2">
+              Facturas por lote (0 = todo en uno)
+              <input
+                type="number"
+                min={0}
+                value={porLote}
+                disabled={subiendo}
+                onChange={(e) => setPorLote(Math.max(0, Math.floor(Number(e.target.value))))}
+                className={`w-24 ${CLASE_CAMPO}`}
+              />
+              <span>= {numeroLotes} lote(s)</span>
+            </label>
+            <p className="text-sm text-secundario">
+              Procesarlas gastará unas {formatoEntero(archivos.length * LECTURAS_POR_FACTURA)}{" "}
+              lecturas de la cuota diaria de Firestore.
+            </p>
+            <button
+              type="button"
+              onClick={subirTodo}
+              disabled={subiendo}
+              className={`self-start ${CLASE_BOTON_PRINCIPAL}`}
+            >
+              {subiendo ? "Subiendo…" : "Subir y procesar"}
+            </button>
+          </>
+        )}
+
+        {error && (
+          <p role="alert" className="text-malo">
+            ✕ {error}
+          </p>
+        )}
+      </Tarjeta>
 
       {lotes.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {lotes.map((lote) => (
-            <li key={lote.id} className="flex flex-col gap-1">
-              <span>
-                {lote.nombre}: {lote.subidas} de {lote.total} subidas
-              </span>
-              <progress value={lote.subidas} max={lote.total} className="w-full" />
-            </li>
-          ))}
-        </ul>
+        <Tarjeta titulo="Avance de esta carga">
+          <ul className="flex flex-col gap-3">
+            {lotes.map((lote) => {
+              const proceso = datos?.procesos.find((p) => p.id === lote.id);
+              const procesadas = proceso ? totalProcesadas(proceso.metricas) : 0;
+              return (
+                <li key={lote.id} className="flex flex-col gap-1">
+                  <span className="font-medium">{lote.nombre}</span>
+                  <span className="text-sm tabular-nums">
+                    Subidas: {lote.subidas} de {lote.total}
+                  </span>
+                  <Barra valor={lote.subidas} maximo={lote.total} etiqueta={`Subida de ${lote.nombre}`} />
+                  <span className="text-sm tabular-nums">
+                    Procesadas: {procesadas} de {lote.total}
+                  </span>
+                  <Barra
+                    valor={procesadas}
+                    maximo={lote.total}
+                    etiqueta={`Procesamiento de ${lote.nombre}`}
+                    tono="bueno"
+                  />
+                </li>
+              );
+            })}
+          </ul>
+          <ResumenEnVivo procesos={procesosDeLaSubida} />
+        </Tarjeta>
       )}
 
       {fallos.length > 0 && !subiendo && (
-        <div className="flex flex-col gap-2">
-          <p role="alert" className="font-medium text-red-700 dark:text-red-400">
+        <Tarjeta>
+          <p role="alert" className="font-medium text-malo">
             ✕ {fallos.length} archivo(s) no se pudieron subir:
           </p>
           <ul className="max-h-48 overflow-y-auto">
             {fallos.map((fallo) => (
-              <li key={`${fallo.procesoId}-${fallo.indice}`}>
+              <li key={fallo.archivo.name}>
                 {fallo.archivo.name}: {fallo.motivo}
               </li>
             ))}
           </ul>
-          <button type="button" onClick={reintentar} className={`${claseBoton} self-start`}>
+          <button type="button" onClick={reintentar} className={`self-start ${CLASE_BOTON}`}>
             Reintentar esos archivos
           </button>
-        </div>
+        </Tarjeta>
       )}
-    </section>
+
+      <Tarjeta titulo="Lotes">
+        <ListaProcesos procesos={datos?.procesos ?? []} />
+      </Tarjeta>
+    </div>
   );
 }

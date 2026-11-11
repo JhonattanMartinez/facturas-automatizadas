@@ -1,6 +1,6 @@
 // Forma de los documentos de Firestore. Firestore no tiene UNIQUE: la unicidad
 // se obtiene usando el valor único como ID del documento y creándolo en una transacción.
-// Las Fases 8 (métricas) y 9 (revisión manual) añadirán campos.
+// La Fase 9 (revisión manual) añadirá campos.
 import type { Timestamp } from "firebase-admin/firestore";
 
 export const COLECCIONES = {
@@ -67,8 +67,29 @@ export type IndiceNumero = {
 
 export type EstadoProceso = "subiendo" | "ejecutando" | "terminado";
 
+export type Importes = {
+  n: number;
+  subtotal: number;
+  iva: number;
+  impoconsumo: number;
+  total: number;
+};
+
+/** Cuenta cada nombre leído: el OCR altera algunos y se muestra el más repetido. */
+export type MetricasProveedor = Importes & { nombres: Record<string, number> };
+
+export type Metricas = {
+  aceptadas: Importes;
+  revision: Importes;
+  errores: number;
+  duplicadas: number;
+  clientesNuevos: number;
+  proveedores: Record<string, MetricasProveedor>; // clave: NIT del proveedor
+};
+
 /** Un lote de facturas. ID automático. */
 export type Proceso = {
+  metricas?: Metricas; // se crean con la primera factura del lote
   uid: string;
   carpeta: string;
   estado: EstadoProceso;

@@ -1,7 +1,11 @@
-// Estado de un lote.
+// Estado de un lote, con sus cifras en vivo. Cuesta una lectura.
 import type { NextRequest } from "next/server";
 import { exigirUsuario } from "@/lib/auth/sesion";
-import { loteNoEncontrado, procesoDelUsuario } from "@/lib/procesamiento/proceso";
+import {
+  loteNoEncontrado,
+  procesoDelUsuario,
+  resumirProceso,
+} from "@/lib/procesamiento/proceso";
 
 export async function GET(
   request: NextRequest,
@@ -14,13 +18,5 @@ export async function GET(
   const proceso = await procesoDelUsuario(id, usuario.uid);
   if (!proceso) return loteNoEncontrado();
 
-  const { carpeta, estado, totalArchivos, inicio, fin } = proceso.datos;
-  return Response.json({
-    id,
-    carpeta,
-    estado,
-    totalArchivos,
-    inicio: inicio.toMillis(),
-    fin: fin?.toMillis() ?? null,
-  });
+  return Response.json(resumirProceso(id, proceso.datos));
 }

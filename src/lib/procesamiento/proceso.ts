@@ -2,6 +2,7 @@
 import type { DocumentReference } from "firebase-admin/firestore";
 import { baseDeDatos } from "@/lib/firebase/admin";
 import { COLECCIONES, type Proceso } from "@/lib/modelo/tipos";
+import { metricasVacias, type ResumenProceso } from "./metricas";
 
 export type ProcesoDelUsuario = {
   referencia: DocumentReference;
@@ -19,6 +20,19 @@ export async function procesoDelUsuario(
   const datos = documento.data() as Proceso | undefined;
   if (!datos || datos.uid !== uid) return null;
   return { referencia, datos };
+}
+
+export function resumirProceso(id: string, proceso: Proceso): ResumenProceso {
+  return {
+    id,
+    carpeta: proceso.carpeta,
+    estado: proceso.estado,
+    totalArchivos: proceso.totalArchivos,
+    inicio: proceso.inicio.toMillis(),
+    fin: proceso.fin?.toMillis() ?? null,
+    rutaExcel: proceso.rutaExcel,
+    metricas: { ...metricasVacias(), ...proceso.metricas },
+  };
 }
 
 /** Un lote ajeno responde igual que uno inexistente, para no revelar que existe. */

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { exigirUsuario } from "@/lib/auth/sesion";
 import { baseDeDatos } from "@/lib/firebase/admin";
 import { COLECCIONES, type Proceso } from "@/lib/modelo/tipos";
+import { resumirProceso } from "@/lib/procesamiento/proceso";
 
 const esquemaNuevoLote = z.object({
   carpeta: z.string().min(1).max(200),
@@ -41,15 +42,17 @@ export async function GET(request: NextRequest): Promise<Response> {
   const usuario = await exigirUsuario(request);
   if (usuario instanceof Response) return usuario;
 
-  const consulta = await baseDeDatos()
+  // El motor pide ?estado=ejecutando para retomar los lotes que quedaron a medias.
+  const estado = request.nextUrl.searchParams.get("estado");
+  let consulta = baseDeDatos()
     .collection(COLECCIONES.procesos)
-    .where("uid", "==", usuario.uid)
-    .get();
+    .where("uid", "==", usuario.uid);
+  if (estado) consulta = consulta.where("estado", "==", estado);
 
-  const procesos = consulta.docs.map((documento) => {
-    const { carpeta, estado, totalArchivos } = documento.data() as Proceso;
-    return { id: documento.id, carpeta, estado, totalArchivos };
-  });
+  const resultado = await consulta.get();
+  const procesos = resultado.docs.map((documento) =>
+    resumirProceso(documento.id, documento.data() as Proceso),
+  );
 
   return Response.json({ procesos });
 }

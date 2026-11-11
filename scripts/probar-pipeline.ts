@@ -20,6 +20,8 @@ import { finalizarProceso } from "@/lib/procesamiento/finalizar";
 import { guardarFactura } from "@/lib/procesamiento/guardar";
 import { iniciarProceso } from "@/lib/procesamiento/iniciar";
 import { procesarLote, type ResumenLote } from "@/lib/procesamiento/lote";
+import { metricasVacias } from "@/lib/procesamiento/metricas";
+import { recalcularMetricas } from "@/lib/procesamiento/metricas-firestore";
 import { analizarExcel, crearComprobador, limpiarLote } from "./comun";
 
 const UID = "prueba-pipeline";
@@ -156,6 +158,28 @@ async function main(): Promise<void> {
     comprobar("los totales son números, no texto", true, excelA.totalesNumericos);
     comprobar("las fechas son fechas, no texto", true, excelA.fechasReales);
 
+    console.log("--- Contadores del lote");
+    const metricasDe = async (r: DocumentReference) => ({
+      ...metricasVacias(),
+      ...(await delUsuario(r)).datos.metricas,
+    });
+    const m = await metricasDe(a);
+    comprobar("contador de aceptadas", resumenA.aceptadas, m.aceptadas.n);
+    comprobar("contador de revisión", resumenA.revision, m.revision.n);
+    comprobar("el total aceptado cuadra con las facturas", sumaTotal, m.aceptadas.total);
+    comprobar("contador de clientes nuevos", clientesA.size, m.clientesNuevos);
+    const porProveedor = Object.values(m.proveedores);
+    comprobar("los proveedores suman las aceptadas", m.aceptadas.n, porProveedor.reduce((s, p) => s + p.n, 0));
+    // Los nombres llevan puntos (S.A.S.): si se guardaran mal, se partirían en varios campos.
+    comprobar(
+      "los nombres se cuentan completos, con sus puntos",
+      m.aceptadas.n,
+      porProveedor.reduce((s, p) => s + Object.values(p.nombres).reduce((x, y) => x + y, 0), 0),
+    );
+    const recalculadas = await recalcularMetricas(a);
+    comprobar("recalcular da el mismo total", m.aceptadas.total, recalculadas.aceptadas.total);
+    comprobar("recalcular da los mismos proveedores", porProveedor.length, Object.keys(recalculadas.proveedores).length);
+
     console.log("--- 2. Reproceso: las mismas imágenes en otra ruta");
     const b = await crearLote("prueba-b", principales);
     await iniciarProceso(await delUsuario(b));
@@ -163,6 +187,8 @@ async function main(): Promise<void> {
     comprobar("duplicadas", 10, resumenB.duplicadas);
     await finalizarProceso(await delUsuario(b));
     const excelB = await analizarExcel(await descargar((await delUsuario(b)).datos.rutaExcel ?? ""));
+    comprobar("contador de duplicadas", 10, (await metricasDe(b)).duplicadas);
+    comprobar("el reproceso no suma aceptadas", 0, (await metricasDe(b)).aceptadas.n);
     comprobar("el Excel del reproceso no sale vacío", 10, excelB.filasFacturas);
     comprobar("y suma lo mismo", sumaFirestore, excelB.sumaTotal);
     comprobar("el reproceso no crea facturas", 0, (await facturasDe(b.id)).size);
@@ -217,6 +243,7 @@ async function main(): Promise<void> {
     const [archivoE] = await cola(e);
     comprobar("reintenta y termina en error", 1, resumenE.errores);
     comprobar("usó los 3 intentos", 3, archivoE.intentos);
+    comprobar("contador de errores", 1, (await metricasDe(e)).errores);
     const facturasE = await facturasDe(e.id);
     comprobar("la factura queda en revisión, no se pierde", "revision", facturasE.docs[0]?.get("estado"));
   } finally {

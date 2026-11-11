@@ -41,9 +41,9 @@ export async function subir(
   if (error) throw new Error(`No se pudo subir ${ruta}: ${error.message}`);
 }
 
-export async function listarNombres(carpeta: string): Promise<string[]> {
+async function listarEntradas(carpeta: string) {
   const TAMANO_PAGINA = 1000;
-  const nombres: string[] = [];
+  const entradas = [];
   for (let offset = 0; ; offset += TAMANO_PAGINA) {
     const { data, error } = await bucket().list(carpeta, {
       limit: TAMANO_PAGINA,
@@ -51,13 +51,35 @@ export async function listarNombres(carpeta: string): Promise<string[]> {
       sortBy: { column: "name", order: "asc" },
     });
     if (error) throw new Error(`No se pudo listar ${carpeta}: ${error.message}`);
-    nombres.push(...data.map((archivo) => archivo.name));
-    if (data.length < TAMANO_PAGINA) return nombres;
+    entradas.push(...data);
+    if (data.length < TAMANO_PAGINA) return entradas;
   }
 }
 
+export async function listarNombres(carpeta: string): Promise<string[]> {
+  return (await listarEntradas(carpeta)).map((archivo) => archivo.name);
+}
+
 export async function eliminar(rutas: string[]): Promise<void> {
-  if (rutas.length === 0) return;
-  const { error } = await bucket().remove(rutas);
-  if (error) throw new Error(`No se pudo borrar: ${error.message}`);
+  const TAMANO_TANDA = 500;
+  for (let i = 0; i < rutas.length; i += TAMANO_TANDA) {
+    const { error } = await bucket().remove(rutas.slice(i, i + TAMANO_TANDA));
+    if (error) throw new Error(`No se pudo borrar: ${error.message}`);
+  }
+}
+
+async function rutasBajo(carpeta: string): Promise<string[]> {
+  const rutas: string[] = [];
+  for (const entrada of await listarEntradas(carpeta)) {
+    const ruta = carpeta ? `${carpeta}/${entrada.name}` : entrada.name;
+    // Supabase representa las carpetas como entradas sin id.
+    if (entrada.id === null) rutas.push(...(await rutasBajo(ruta)));
+    else rutas.push(ruta);
+  }
+  return rutas;
+}
+
+/** Borra TODO el contenido del almacén. Solo para «Borrar todo». */
+export async function vaciarAlmacen(): Promise<void> {
+  await eliminar(await rutasBajo(""));
 }
