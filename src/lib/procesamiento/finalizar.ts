@@ -1,14 +1,13 @@
 // Cierra un lote cuando no queda trabajo. Se puede llamar las veces que haga falta.
 import { Timestamp } from "firebase-admin/firestore";
 import { subir } from "@/lib/almacenamiento";
-import { generarExcel, nombreExcel } from "@/lib/excel/generar";
+import { generarExcel, nombreExcel, TIPO_EXCEL } from "@/lib/excel/generar";
 import { baseDeDatos } from "@/lib/firebase/admin";
 import { COLECCIONES, type Proceso } from "@/lib/modelo/tipos";
 import { OPCIONES_TRANSACCION, TERMINADO } from "./cola";
 import type { ProcesoDelUsuario } from "./proceso";
 
 const BLOQUEO_MS = 2 * 60 * 1000;
-const TIPO_EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export async function finalizarProceso({
   referencia,

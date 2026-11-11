@@ -8,6 +8,7 @@ import { Motor } from "./Motor";
 
 const ENLACES = [
   { ruta: "/", texto: "Procesar facturas" },
+  { ruta: "/revision", texto: "Revisión" },
   { ruta: "/metricas", texto: "Métricas" },
 ];
 
@@ -43,7 +44,7 @@ export function MenuSuperior() {
     <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-borde bg-superficie px-4 py-3">
       <nav className="flex flex-wrap gap-4">
         {ENLACES.map(({ ruta, texto }) => {
-          const activo = rutaActual === ruta;
+          const activo = ruta === "/" ? rutaActual === "/" : rutaActual.startsWith(ruta);
           return (
             <Link
               key={ruta}

@@ -42,22 +42,44 @@ export async function recalcularMetricas(proceso: DocumentReference): Promise<Me
 
   const eventos: EventoMetricas[] = [];
   for (const archivo of cola) {
-    if (archivo.resultado === "duplicada") eventos.push({ tipo: "duplicada" });
-    else if (archivo.resultado === "error") eventos.push({ tipo: "error" });
-    else if (archivo.resultado && archivo.hashArchivo) {
-      const factura = (await coleccionFacturas.doc(archivo.hashArchivo).get()).data() as
-        | Factura
-        | undefined;
-      if (!factura) continue;
+    if (archivo.resultado === "duplicada") {
+      eventos.push({ tipo: "duplicada" });
+      continue;
+    }
+    const factura = archivo.hashArchivo
+      ? ((await coleccionFacturas.doc(archivo.hashArchivo).get()).data() as Factura | undefined)
+      : undefined;
+
+    if (archivo.resultado === "error") {
+      eventos.push({ tipo: "error" });
+    } else if (archivo.resultado && factura) {
+      const corregida = Boolean(factura.corregidaManualmente);
       eventos.push({
+        // Lo que decidió la máquina no cambia aunque luego la haya corregido una persona.
         tipo: archivo.resultado,
         subtotal: factura.subtotal,
         iva: factura.iva,
         impoconsumo: factura.impoconsumo,
         total: factura.total,
-        nit: factura.nitProveedor,
+        nit: corregida ? null : factura.nitProveedor,
         nombre: factura.proveedor,
         clienteNuevo: archivo.clienteNuevo,
+      });
+    }
+
+    if (factura?.corregidaManualmente) {
+      eventos.push({
+        tipo: "correccion",
+        anterior: null,
+        nueva: {
+          subtotal: factura.subtotal ?? 0,
+          iva: factura.iva ?? 0,
+          impoconsumo: factura.impoconsumo ?? 0,
+          total: factura.total ?? 0,
+          nit: factura.nitProveedor ?? "",
+          nombre: factura.proveedor ?? "",
+        },
+        clienteNuevo: false, // la cola no guarda si la corrección creó un cliente
       });
     }
   }

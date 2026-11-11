@@ -11,6 +11,7 @@ import {
   type Proceso,
 } from "@/lib/modelo/tipos";
 
+export const TIPO_EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const FORMATO_MONEDA = '"$"#,##0';
 const FORMATO_FECHA = "yyyy-mm-dd";
 

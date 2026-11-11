@@ -1,10 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { totalProcesadas, type ResumenProceso } from "@/lib/procesamiento/metricas";
 import { formatoFechaHora, formatoPesos } from "./formato";
 import { ResumenEnVivo } from "./ResumenEnVivo";
-import { Barra, CLASE_CAMPO, CLASE_ENLACE, Estado, estadoDeLote, Tabla, Tarjeta } from "./ui";
+import {
+  Barra,
+  CLASE_BOTON,
+  CLASE_CAMPO,
+  CLASE_ENLACE,
+  Estado,
+  estadoDeLote,
+  Tabla,
+  Tarjeta,
+} from "./ui";
 
 const INTERVALO_MS = 4000;
 
@@ -29,6 +39,8 @@ export function VistaProceso({ id }: { id: string }) {
   const [noExiste, setNoExiste] = useState(false);
   const [facturas, setFacturas] = useState<FilaFactura[] | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("todas");
+  const [regenerando, setRegenerando] = useState(false);
+  const [avisoExcel, setAvisoExcel] = useState<string | null>(null);
 
   useEffect(() => {
     let vigente = true;
@@ -88,6 +100,23 @@ export function VistaProceso({ id }: { id: string }) {
   if (noExiste) return <p className="text-malo">✕ Este lote no existe o no es tuyo.</p>;
   if (!proceso) return <p className="text-secundario">Cargando…</p>;
 
+  async function regenerarExcel() {
+    setRegenerando(true);
+    setAvisoExcel(null);
+    try {
+      const respuesta = await fetch(`/api/procesos/${id}/regenerar-excel`, { method: "POST" });
+      setAvisoExcel(
+        respuesta.ok
+          ? "✓ Excel regenerado: ya puedes descargarlo con las correcciones."
+          : `✕ No se pudo regenerar (error ${respuesta.status}).`,
+      );
+    } catch {
+      setAvisoExcel("✕ No se pudo regenerar: falla de red.");
+    } finally {
+      setRegenerando(false);
+    }
+  }
+
   const procesadas = totalProcesadas(proceso.metricas);
   const visibles = (facturas ?? []).filter((f) => filtro === "todas" || f.estado === filtro);
 
@@ -111,6 +140,19 @@ export function VistaProceso({ id }: { id: string }) {
         </span>
         <Barra valor={procesadas} maximo={proceso.totalArchivos} etiqueta="Avance del lote" tono="bueno" />
         <ResumenEnVivo procesos={[proceso]} />
+        {terminado && proceso.metricas.manuales.n > 0 && (
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={regenerarExcel}
+              disabled={regenerando}
+              className={CLASE_BOTON}
+            >
+              {regenerando ? "Regenerando…" : "Regenerar el Excel con las correcciones a mano"}
+            </button>
+            {avisoExcel && <span role="status">{avisoExcel}</span>}
+          </div>
+        )}
       </Tarjeta>
 
       {terminado && (
@@ -163,6 +205,9 @@ export function VistaProceso({ id }: { id: string }) {
                         <div className="flex flex-col gap-1">
                           <Estado tono="malo" texto="En revisión" />
                           <span className="text-xs text-secundario">{f.motivos.join("; ")}</span>
+                          <Link href={`/revision/${f.hash}`} className={CLASE_ENLACE}>
+                            Revisar
+                          </Link>
                         </div>
                       )}
                     </td>

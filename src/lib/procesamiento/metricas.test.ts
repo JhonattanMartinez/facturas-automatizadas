@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   calcularTasas,
   cambiosDe,
+  estadoRevision,
+  importesProcesados,
   metricasDesdeEventos,
   metricasVacias,
   proveedoresOrdenados,
   sumarMetricas,
   totalProcesadas,
   type EventoMetricas,
+  type FotoCorreccion,
 } from "./metricas";
 
 const aceptada = (
@@ -119,6 +122,74 @@ describe("un solo nombre por NIT", () => {
     const a = metricasDesdeEventos([aceptada("9", 1, false, "B"), aceptada("9", 1, false, "A")]);
     const b = metricasDesdeEventos([aceptada("9", 1, false, "A"), aceptada("9", 1, false, "B")]);
     expect(proveedoresOrdenados(a)[0].nombre).toBe(proveedoresOrdenados(b)[0].nombre);
+  });
+});
+
+describe("correcciones manuales", () => {
+  const foto = (total: number, nit = "900", nombre = "Bien S.A."): FotoCorreccion => ({
+    subtotal: total, iva: 0, impoconsumo: 0, total, nit, nombre,
+  });
+  const primera = (total: number): EventoMetricas => ({
+    tipo: "correccion", anterior: null, nueva: foto(total), clienteNuevo: false,
+  });
+
+  it("no cambian el porcentaje de leídas correctamente, que mide a la máquina", () => {
+    const m = metricasDesdeEventos([
+      aceptada("1", 100),
+      { ...aceptada("2", 100), tipo: "revision" },
+      primera(100),
+    ]);
+    expect(calcularTasas(m)).toMatchObject({ correctas: 1, malas: 1, pctCorrectas: 50 });
+    expect(m.manuales.n).toBe(1);
+  });
+
+  it("entran en lo procesado y en su proveedor", () => {
+    const m = metricasDesdeEventos([aceptada("900", 100), primera(50)]);
+    expect(importesProcesados(m)).toMatchObject({ n: 2, total: 150 });
+    expect(m.proveedores["900"]).toMatchObject({ n: 2, total: 150 });
+  });
+
+  it("cuenta las revisadas y las que esperan", () => {
+    const m = metricasDesdeEventos([
+      { ...aceptada("2", 1), tipo: "revision" },
+      { ...aceptada("3", 1), tipo: "revision" },
+      { tipo: "error" },
+      primera(1),
+    ]);
+    expect(estadoRevision(m)).toEqual({ revisadas: 1, pendientes: 2 });
+  });
+
+  it("al reeditar aplica solo la diferencia y no vuelve a contarla", () => {
+    const m = metricasDesdeEventos([
+      primera(100),
+      { tipo: "correccion", anterior: foto(100), nueva: foto(130), clienteNuevo: false },
+    ]);
+    expect(m.manuales).toMatchObject({ n: 1, total: 130 });
+    expect(m.proveedores["900"]).toMatchObject({ n: 1, total: 130 });
+  });
+
+  it("no repite un campo en la misma actualización", () => {
+    const cambios = cambiosDe({
+      tipo: "correccion", anterior: foto(100), nueva: foto(130), clienteNuevo: false,
+    });
+    const rutas = cambios.map(([ruta]) => ruta.join("/"));
+    expect(new Set(rutas).size).toBe(rutas.length);
+  });
+
+  it("al cambiar de NIT mueve la factura de un proveedor a otro", () => {
+    const m = metricasDesdeEventos([
+      primera(100),
+      { tipo: "correccion", anterior: foto(100), nueva: foto(100, "800", "Otro"), clienteNuevo: false },
+    ]);
+    expect(proveedoresOrdenados(m).map((p) => p.nit)).toEqual(["800"]);
+  });
+
+  it("al corregir el nombre, el anterior deja de contar", () => {
+    const m = metricasDesdeEventos([
+      { tipo: "correccion", anterior: null, nueva: foto(1, "900", "ECTURA"), clienteNuevo: false },
+      { tipo: "correccion", anterior: foto(1, "900", "ECTURA"), nueva: foto(1, "900", "Bien"), clienteNuevo: false },
+    ]);
+    expect(proveedoresOrdenados(m)[0].nombre).toBe("Bien");
   });
 });
 

@@ -117,6 +117,9 @@ export function guardarFactura(entrada: {
       uid: proceso.uid,
       creadoEn: ahora,
       items: datos.items,
+      dvProveedor: datos.dvProveedor,
+      clienteDv: datos.clienteDv,
+      clienteDocumentoLeido: datos.clienteDocumento,
     };
     transaccion.create(refFactura, nuevaFactura);
     if (refIndice && !numeroOcupado) {
@@ -182,6 +185,9 @@ export function guardarFallo(entrada: {
         uid: proceso.uid,
         creadoEn: Timestamp.now(),
         items: [],
+        dvProveedor: null,
+        clienteDv: null,
+        clienteDocumentoLeido: null,
       };
       transaccion.create(refFactura, nuevaFactura);
     }

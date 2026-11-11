@@ -1,6 +1,5 @@
 // Forma de los documentos de Firestore. Firestore no tiene UNIQUE: la unicidad
 // se obtiene usando el valor único como ID del documento y creándolo en una transacción.
-// La Fase 9 (revisión manual) añadirá campos.
 import type { Timestamp } from "firebase-admin/firestore";
 
 export const COLECCIONES = {
@@ -58,6 +57,16 @@ export type Factura = {
   uid: string;
   creadoEn: Timestamp;
   items: ItemFactura[];
+  // Lo leído aunque no pasara el dígito de verificación: precarga el formulario de revisión.
+  dvProveedor: string | null;
+  clienteDv: string | null;
+  clienteDocumentoLeido: string | null;
+  // Constancia de la revisión manual: quién decidió qué y qué decía la máquina.
+  corregidaManualmente?: boolean;
+  corregidaPor?: string;
+  corregidaEn?: Timestamp;
+  motivosOriginales?: string[];
+  validacionesIgnoradas?: string[];
 };
 
 /** ID del documento: el número de factura (FE-000123). Se crea en la misma transacción que la factura. */
@@ -81,6 +90,8 @@ export type MetricasProveedor = Importes & { nombres: Record<string, number> };
 export type Metricas = {
   aceptadas: Importes;
   revision: Importes;
+  // Aparte de «aceptadas»: ese porcentaje mide a la máquina y no debe inflarse con trabajo humano.
+  manuales: Importes;
   errores: number;
   duplicadas: number;
   clientesNuevos: number;

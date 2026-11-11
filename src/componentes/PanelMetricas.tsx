@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   calcularTasas,
+  estadoRevision,
+  importesProcesados,
   proveedoresOrdenados,
   sumarMetricas,
 } from "@/lib/procesamiento/metricas";
@@ -67,7 +69,8 @@ export function PanelMetricas() {
   const tasas = calcularTasas(metricas);
   const proveedores = proveedoresOrdenados(metricas);
   const mayorTotal = proveedores[0]?.total ?? 0;
-  const { aceptadas, revision, errores } = metricas;
+  const procesado = importesProcesados(metricas);
+  const { revisadas, pendientes } = estadoRevision(metricas);
 
   return (
     <div className="flex w-full max-w-6xl flex-col gap-4">
@@ -107,7 +110,12 @@ export function PanelMetricas() {
         «Leída correctamente» significa que pasó todas las validaciones; no se compara con una
         respuesta conocida, así que un error que cuadre aritméticamente podría pasar. «Mal leída»
         significa que quedó en revisión o dio error. Los porcentajes son sobre facturas distintas:
-        las duplicadas no cuentan porque ya estaban.
+        las duplicadas no cuentan porque ya estaban. Miden a la máquina, así que no cambian cuando
+        una persona corrige una factura.
+      </p>
+      <p>
+        De las {formatoEntero(tasas.malas)} mal leídas, {formatoEntero(revisadas)} ya se revisaron a
+        mano y {formatoEntero(pendientes)} esperan a una persona.
       </p>
 
       <Tarjeta>
@@ -120,14 +128,14 @@ export function PanelMetricas() {
 
       <Tarjeta titulo="Lo procesado">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Dato etiqueta="Antes de IVA" valor={formatoPesos(aceptadas.subtotal)} />
-          <Dato etiqueta="IVA" valor={formatoPesos(aceptadas.iva)} />
-          <Dato etiqueta="Impoconsumo" valor={formatoPesos(aceptadas.impoconsumo)} />
-          <Dato etiqueta="Total" valor={formatoPesos(aceptadas.total)} />
+          <Dato etiqueta="Antes de IVA" valor={formatoPesos(procesado.subtotal)} />
+          <Dato etiqueta="IVA" valor={formatoPesos(procesado.iva)} />
+          <Dato etiqueta="Impoconsumo" valor={formatoPesos(procesado.impoconsumo)} />
+          <Dato etiqueta="Total" valor={formatoPesos(procesado.total)} />
         </div>
         <p className="text-sm text-secundario">
-          Solo facturas aceptadas. {formatoEntero(revision.n + errores)} en revisión o con error no
-          están incluidas.
+          Las aceptadas por la máquina más las revisadas a mano. Las {formatoEntero(pendientes)}{" "}
+          pendientes de revisión no están incluidas.
         </p>
       </Tarjeta>
 
@@ -175,7 +183,7 @@ export function PanelMetricas() {
               <th className="text-right">Correctas</th>
               <th className="text-right">Mal leídas</th>
               <th className="min-w-24">Proporción</th>
-              <th className="text-right">Total aceptado</th>
+              <th className="text-right">Total procesado</th>
               <th>Estado</th>
               <th>Enlaces</th>
             </tr>
@@ -203,7 +211,7 @@ export function PanelMetricas() {
                     </div>
                   </td>
                   <td className="text-right tabular-nums">
-                    {formatoPesos(proceso.metricas.aceptadas.total)}
+                    {formatoPesos(importesProcesados(proceso.metricas).total)}
                   </td>
                   <td>{estadoDeLote(proceso.estado)}</td>
                   <td className="whitespace-nowrap">

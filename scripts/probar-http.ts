@@ -4,6 +4,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { deleteApp } from "firebase-admin/app";
+import sharp from "sharp";
 import { appFirebase, baseDeDatos } from "@/lib/firebase/admin";
 import { COLECCIONES } from "@/lib/modelo/tipos";
 import type { ResumenProceso } from "@/lib/procesamiento/metricas";
@@ -133,6 +134,18 @@ async function main(): Promise<void> {
     comprobar("imagen original", 200, imagen.status);
     comprobar("se sirve como imagen", true, imagen.headers.get("content-type")?.startsWith("image/") ?? false);
     comprobar("la imagen exige sesión", 401, (await fetch(`${url}/api/facturas/${lista.facturas[0].hash}/imagen`)).status);
+
+    const rutaImagen = `${url}/api/facturas/${lista.facturas[0].hash}/imagen`;
+    const dimensiones = async (respuesta: Response) => {
+      const { width, height } = await sharp(Buffer.from(await respuesta.arrayBuffer())).metadata();
+      return { width, height };
+    };
+    const original = await dimensiones(await fetch(rutaImagen, conSesion));
+    const girada = await dimensiones(await fetch(`${rutaImagen}?rotar=90`, conSesion));
+    comprobar("girar intercambia ancho y alto", `${original.height}x${original.width}`, `${girada.width}x${girada.height}`);
+    comprobar("rechaza un giro inválido", 400, (await fetch(`${rutaImagen}?rotar=45`, conSesion)).status);
+    comprobar("la lista de revisión responde", 200, (await fetch(`${url}/api/facturas`, conSesion)).status);
+    comprobar("la lista de revisión exige sesión", 401, (await fetch(`${url}/api/facturas`)).status);
 
     const segundo = await correrLote("prueba-http-2");
     console.log(`      reproceso: ${(segundo.ms / 1000).toFixed(1)} s`);
