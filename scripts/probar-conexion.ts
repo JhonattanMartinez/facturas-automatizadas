@@ -3,9 +3,12 @@
 // Solo imprime "OK" o un error limpio: nunca el valor de una variable.
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { cert, deleteApp, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { deleteApp } from "firebase-admin/app";
+import {
+  appFirebase,
+  autenticacion,
+  baseDeDatos,
+} from "@/lib/firebase/admin";
 
 const VARIABLES_REQUERIDAS = [
   "SUPABASE_URL",
@@ -52,7 +55,7 @@ function conTope<T>(promesa: Promise<T>): Promise<T> {
 }
 
 async function probarFirestore(): Promise<void> {
-  const documento = getFirestore()
+  const documento = baseDeDatos()
     .collection("_prueba_conexion")
     .doc(randomUUID());
   const marca = randomUUID();
@@ -69,7 +72,7 @@ async function probarFirestore(): Promise<void> {
 }
 
 async function probarAuth(): Promise<void> {
-  await getAuth().listUsers(1);
+  await autenticacion().listUsers(1);
 }
 
 async function probarSupabase(): Promise<void> {
@@ -107,14 +110,6 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const app = initializeApp({
-    credential: cert({
-      projectId: variable("FIREBASE_ADMIN_PROJECT_ID"),
-      clientEmail: variable("FIREBASE_ADMIN_CLIENT_EMAIL"),
-      privateKey: variable("FIREBASE_ADMIN_PRIVATE_KEY").replace(/\\n/g, "\n"),
-    }),
-  });
-
   const pruebas: [string, () => Promise<void>][] = [
     ["Firestore", probarFirestore],
     ["Auth", probarAuth],
@@ -134,7 +129,7 @@ async function main(): Promise<void> {
 
   // Se cierra Firebase en vez de llamar process.exit: en Windows, salir con
   // conexiones abiertas aborta Node con un error interno de libuv.
-  await deleteApp(app);
+  await deleteApp(appFirebase());
   process.exitCode = todoBien ? 0 : 1;
 }
 
