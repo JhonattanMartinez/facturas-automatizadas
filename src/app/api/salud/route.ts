@@ -2,7 +2,8 @@
 // Devuelve solo booleanos y nombres de variables, nunca sus valores.
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { connection } from "next/server";
+import { connection, type NextRequest } from "next/server";
+import { exigirUsuario } from "@/lib/auth/sesion";
 
 const VARIABLES_REQUERIDAS = [
   "SUPABASE_URL",
@@ -41,9 +42,12 @@ async function sharpFunciona(): Promise<boolean> {
   }
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request: NextRequest): Promise<Response> {
   // Sin esto, cacheComponents podría guardar la respuesta de la compilación.
   await connection();
+
+  const usuario = await exigirUsuario(request);
+  if (usuario instanceof Response) return usuario;
 
   const datosIdioma = existsSync(RUTA_DATOS_IDIOMA);
   const sharp = await sharpFunciona();
