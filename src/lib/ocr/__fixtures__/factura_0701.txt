@@ -1,0 +1,30 @@
+DIGITALWARE GARRIDO SALINAS S.A.S.
+NIT: 863060268-4
+Diag. 43 * 68-84
+Cali Tel 603 6875736
+Responsable de IVA
+FACTURA ELECTRONICA DE VENTA
+No. FE-000357
+Res. DIAN 18764056692409
+19/02/2026 Pref. FE
+Fecha: 09/09/2026 16:37:39
+Vence: 09/09/2026
+Pago: Contado
+Medio: Transferencia débito bancaria
+CLIENTE: Inversiones Briseño Gallegos S.A.S.
+NIT: 855419738-9
+UPS interactiva 1000 VA
+1 x $593.700 $593.700
+Mouse óptico inalámbrico ergonómico
+9 x $36.100 $324.900
+Cable HDMI 2.0 de 2 metros
+7 x $22.900 $160.300
+Router Wi-Fi 6 doble banda
+5 x $280.300 $1.401.500
+SUBTOTAL $2.480.400
+IVA 19% $471.276
+TOTAL $2.951.676
+CUFE: 63aac6879eeds1fe8700b39982425b5eb6e8342a3d739704273420070d99a4f311
+Sa53f3b1147974d24980ba32cfa8sa
+Representación gráfica de factura electrónica de venta.
+Documento sintético con datos ficticios para fines académicos.

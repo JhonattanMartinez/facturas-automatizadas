@@ -1,0 +1,37 @@
+Infotec Rico Rubio S.A. FACTURA ELECTRÓNICA DE VENTA
+
+NIT: 856.162.509-7 No. FE-000564
+
+Responsable de IVA
+
+Av. 1194 31-41, Barranquilla
+
+Tel. 607 7727546
+
+Resolución DIAN No. 18764721181387 del 2026-02-02. Prefijo FE, rango del FE-000001 al FE-050000.
+
+Fecha de emisión: 2026-08-28 10:00:52 Fecha de vencimiento: 2026-09-27
+
+Forma de pago: Crédito 30 días Medio de pago: Transferencia débito bancaria
+
+Adquirente: Tomás Ramos Ávila Pantoja Pineda NIT/CC: 811.329.549-7
+
+[sein eme] velramero [va ]—velrit
+
+1 | Impresora multifuncional láser monocromática 1 $1.157.300 19% $1.157.300
+con red
+
+Teclado mecánico inalámbrico español $148.500 $742.500
+
+Portátil 14" Core i5 16 GB RAM 512 GB SSD $2.683.300 $8.049.900
+
+la Monitor LED 24 pulgadas Full HD 8 $854.600 $6.836.800
+
+UPS interactiva 1000 VA $628.100 $628.100
+Valor antes de IVA $17.414.600
+IVA 19% $3.308.774
+TOTAL A PAGAR $20.723.374
+
+CUFE: ef1448a27f8f2fb1bb92454a3451d0efee51ce456a4b61411dfc197aeab3dfcc7dc967aea7 f826aadSefde1a979d62db
+
+Representación gráfica de factura electrónica de venta. Documento sintético con datos ficticios para fines académicos.

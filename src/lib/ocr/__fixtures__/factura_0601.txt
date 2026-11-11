@@ -1,0 +1,20 @@
+. : FACTURA ELECTRÓNICA
+Infotec Rico Rubio S.A.
+NIT 856162509-7 - Responsable de IVA FE-000108
+CLIENTE DATOS DE LA FACTURA
+Agustín Córdova Ayala González Mota Emisión: 2026-02-04 - 11:22:26
+Documento: 8952831024 Vence: 2026-03-06
+Crédito 30 días - Efectivo
+Av. 119 4 31-41, Barranquilla - Resolución DIAN 18764721181387 de 2026-02-02 - Prefijo FE
+Cant. Descripción Precio unitario Subtotal
+2 Portátil 14" Core i5 16 GB RAM 512 GB SSD $2.788.400 $5.576.800
+3 Disco de estado sólido SSD 1 TB $389.000 $1.167.000
+14 Mouse óptico inalámbrico ergonómico $94.300 $1.320.200
+10 Teclado mecánico inalámbrico español $121.500 $1.215.000
+1 Router Wi-Fi 6 doble banda $333.800 $333.800
+Subtotal $9.612.800
+IVA (19%) $1.826.432
+—————————
+Total factura $11.439.232
+CUFE A2d93bdf230e2d4867e5a20022e025ed8b62af71189215b7062651037f4166ca746723859d108232809528b6BeBc503
+Representación gráfica de factura electrónica de venta. Documento sintético con datos ficticios para fines académicos.
