@@ -32,7 +32,6 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/salud": [DATOS_IDIOMA],
     "/api/procesos/**": ARCHIVOS_OCR,
-    "/api/prueba-ocr": ARCHIVOS_OCR, // temporal, Fase 5
   },
   turbopack: {
     rules: {
