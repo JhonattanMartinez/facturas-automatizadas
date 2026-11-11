@@ -28,6 +28,19 @@ export async function descargar(ruta: string): Promise<Buffer> {
   return Buffer.from(await data.arrayBuffer());
 }
 
+export async function subir(
+  ruta: string,
+  contenido: Buffer,
+  tipoContenido: string,
+): Promise<void> {
+  const { error } = await bucket().upload(ruta, contenido, {
+    contentType: tipoContenido,
+    // Un reintento tras una falla de red escribe en la misma ruta y no debe fallar.
+    upsert: true,
+  });
+  if (error) throw new Error(`No se pudo subir ${ruta}: ${error.message}`);
+}
+
 export async function listarNombres(
   carpeta: string,
   limite = 1000,
