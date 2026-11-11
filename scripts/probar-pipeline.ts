@@ -6,7 +6,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { deleteApp } from "firebase-admin/app";
 import { Timestamp, type DocumentReference } from "firebase-admin/firestore";
-import { eliminar, subir } from "@/lib/almacenamiento";
+import { descargar, eliminar, subir } from "@/lib/almacenamiento";
 import { appFirebase, baseDeDatos } from "@/lib/firebase/admin";
 import {
   COLECCIONES,
@@ -20,7 +20,7 @@ import { finalizarProceso } from "@/lib/procesamiento/finalizar";
 import { guardarFactura } from "@/lib/procesamiento/guardar";
 import { iniciarProceso } from "@/lib/procesamiento/iniciar";
 import { procesarLote, type ResumenLote } from "@/lib/procesamiento/lote";
-import { crearComprobador, limpiarLote } from "./comun";
+import { analizarExcel, crearComprobador, limpiarLote } from "./comun";
 
 const UID = "prueba-pipeline";
 type Imagen = { nombre: string; bytes: Buffer };
@@ -145,11 +145,26 @@ async function main(): Promise<void> {
       comprobar(`índice ${numero} apunta a su factura`, documento.id, indice.get("hashArchivo"));
     }
 
+    console.log("--- Excel del lote");
+    const excelA = await analizarExcel(await descargar((await delUsuario(a)).datos.rutaExcel ?? ""));
+    const todas = facturasA.docs.map((d) => d.data() as Factura);
+    const sumaFirestore = todas.reduce((s, f) => s + (f.total ?? 0), 0);
+    comprobar("hojas", "Facturas,Ítems,Clientes,Resumen", excelA.hojas);
+    comprobar("filas de facturas", 10, excelA.filasFacturas);
+    comprobar("filas de ítems", todas.reduce((s, f) => s + f.items.length, 0), excelA.filasItems);
+    comprobar("suma de la columna Total = Firestore", sumaFirestore, excelA.sumaTotal);
+    comprobar("los totales son números, no texto", true, excelA.totalesNumericos);
+    comprobar("las fechas son fechas, no texto", true, excelA.fechasReales);
+
     console.log("--- 2. Reproceso: las mismas imágenes en otra ruta");
     const b = await crearLote("prueba-b", principales);
     await iniciarProceso(await delUsuario(b));
     const resumenB = await vaciarCola(b, 3);
     comprobar("duplicadas", 10, resumenB.duplicadas);
+    await finalizarProceso(await delUsuario(b));
+    const excelB = await analizarExcel(await descargar((await delUsuario(b)).datos.rutaExcel ?? ""));
+    comprobar("el Excel del reproceso no sale vacío", 10, excelB.filasFacturas);
+    comprobar("y suma lo mismo", sumaFirestore, excelB.sumaTotal);
     comprobar("el reproceso no crea facturas", 0, (await facturasDe(b.id)).size);
     comprobar("el reproceso no crea clientes", 0, (await clientesDe(b.id)).size);
     comprobar("las facturas originales no cambian", 10, (await facturasDe(a.id)).size);

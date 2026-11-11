@@ -1,11 +1,14 @@
 // Cierra un lote cuando no queda trabajo. Se puede llamar las veces que haga falta.
 import { Timestamp } from "firebase-admin/firestore";
+import { subir } from "@/lib/almacenamiento";
+import { generarExcel, nombreExcel } from "@/lib/excel/generar";
 import { baseDeDatos } from "@/lib/firebase/admin";
 import { COLECCIONES, type Proceso } from "@/lib/modelo/tipos";
 import { OPCIONES_TRANSACCION, TERMINADO } from "./cola";
 import type { ProcesoDelUsuario } from "./proceso";
 
 const BLOQUEO_MS = 2 * 60 * 1000;
+const TIPO_EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export async function finalizarProceso({
   referencia,
@@ -42,10 +45,20 @@ export async function finalizarProceso({
     return { listo: actual.estado === "terminado", pendientes: 0 };
   }
 
-  await referencia.update({
-    estado: "terminado",
-    fin: Timestamp.now(),
-    finalizandoDesde: null,
-  });
+  try {
+    const contenido = await generarExcel(referencia, datos);
+    const rutaExcel = `procesos/${referencia.id}/${nombreExcel(new Date())}`;
+    await subir(rutaExcel, contenido, TIPO_EXCEL);
+    await referencia.update({
+      estado: "terminado",
+      fin: Timestamp.now(),
+      rutaExcel,
+      finalizandoDesde: null,
+    });
+  } catch (error) {
+    // Se suelta el cierre para que el siguiente intento no espere el bloqueo de 2 minutos.
+    await referencia.update({ finalizandoDesde: null });
+    throw error;
+  }
   return { listo: true, pendientes: 0 };
 }

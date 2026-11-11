@@ -1,4 +1,5 @@
 // Utilidades de los scripts de prueba.
+import ExcelJS from "exceljs";
 import { eliminar, listarNombres } from "@/lib/almacenamiento";
 import { baseDeDatos } from "@/lib/firebase/admin";
 import { COLECCIONES, type IndiceNumero } from "@/lib/modelo/tipos";
@@ -14,6 +15,34 @@ export function crearComprobador() {
       );
     },
     fallos: () => fallos,
+  };
+}
+
+/** Abre un Excel generado y mide lo que importa: filas, tipos de celda y suma de la columna Total. */
+export async function analizarExcel(contenido: Uint8Array) {
+  const libro = new ExcelJS.Workbook();
+  await libro.xlsx.load(contenido as unknown as ExcelJS.Buffer);
+  const facturas = libro.getWorksheet("Facturas");
+  if (!facturas) throw new Error("El Excel no tiene la hoja Facturas");
+
+  const columna = (titulo: string) =>
+    (facturas.getRow(1).values as unknown[]).indexOf(titulo);
+  const filas = facturas.getRows(2, facturas.rowCount - 1) ?? [];
+  const celdas = (titulo: string) => {
+    const indice = columna(titulo);
+    return filas
+      .map((fila) => fila.getCell(indice).value)
+      .filter((valor) => valor !== null && valor !== undefined);
+  };
+
+  const totales = celdas("Total");
+  return {
+    hojas: libro.worksheets.map((hoja) => hoja.name).join(","),
+    filasFacturas: filas.length,
+    filasItems: (libro.getWorksheet("Ítems")?.rowCount ?? 1) - 1,
+    sumaTotal: totales.reduce<number>((suma, valor) => suma + Number(valor), 0),
+    totalesNumericos: totales.every((valor) => typeof valor === "number"),
+    fechasReales: celdas("Fecha").every((valor) => valor instanceof Date),
   };
 }
 

@@ -6,7 +6,7 @@ import path from "node:path";
 import { deleteApp } from "firebase-admin/app";
 import { appFirebase, baseDeDatos } from "@/lib/firebase/admin";
 import { COLECCIONES } from "@/lib/modelo/tipos";
-import { crearComprobador, iniciarSesion, limpiarLote } from "./comun";
+import { analizarExcel, crearComprobador, iniciarSesion, limpiarLote } from "./comun";
 
 const CANTIDAD = 10;
 const SIMULTANEAS = 3;
@@ -90,8 +90,35 @@ async function main(): Promise<void> {
       .get();
     comprobar("facturas guardadas en Firestore", CANTIDAD, facturas.data().count);
 
+    const descargarExcel = async (id: string) => {
+      const respuesta = await fetch(`${url}/api/procesos/${id}/excel`, { headers: { cookie } });
+      comprobar("descarga del Excel", 200, respuesta.status);
+      comprobar(
+        "se entrega como descarga",
+        true,
+        respuesta.headers.get("content-disposition")?.startsWith("attachment") ?? false,
+      );
+      return analizarExcel(new Uint8Array(await respuesta.arrayBuffer()));
+    };
+
+    const documentos = await baseDeDatos()
+      .collection(COLECCIONES.facturas)
+      .where("procesoId", "==", primero.id)
+      .get();
+    const sumaFirestore = documentos.docs.reduce(
+      (suma, documento) => suma + ((documento.get("total") as number | null) ?? 0),
+      0,
+    );
+    const excel = await descargarExcel(primero.id);
+    comprobar("filas de facturas en el Excel", CANTIDAD, excel.filasFacturas);
+    comprobar("suma de la columna Total = Firestore", sumaFirestore, excel.sumaTotal);
+    comprobar("los totales son números, no texto", true, excel.totalesNumericos);
+    comprobar("las fechas son fechas, no texto", true, excel.fechasReales);
+
     const segundo = await correrLote("prueba-http-2");
     console.log(`      reproceso: ${(segundo.ms / 1000).toFixed(1)} s`);
+    const excelReproceso = await descargarExcel(segundo.id);
+    comprobar("el Excel del reproceso no sale vacío", CANTIDAD, excelReproceso.filasFacturas);
     comprobar("reproceso: todas duplicadas", CANTIDAD, segundo.totales.duplicadas);
     const nuevas = await baseDeDatos()
       .collection(COLECCIONES.facturas)
