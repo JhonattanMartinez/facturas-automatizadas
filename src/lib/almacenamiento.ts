@@ -41,14 +41,23 @@ export async function subir(
   if (error) throw new Error(`No se pudo subir ${ruta}: ${error.message}`);
 }
 
-export async function listarNombres(
-  carpeta: string,
-  limite = 1000,
-): Promise<string[]> {
-  const { data, error } = await bucket().list(carpeta, {
-    limit: limite,
-    sortBy: { column: "name", order: "asc" },
-  });
-  if (error) throw new Error(`No se pudo listar ${carpeta}: ${error.message}`);
-  return data.map((archivo) => archivo.name);
+export async function listarNombres(carpeta: string): Promise<string[]> {
+  const TAMANO_PAGINA = 1000;
+  const nombres: string[] = [];
+  for (let offset = 0; ; offset += TAMANO_PAGINA) {
+    const { data, error } = await bucket().list(carpeta, {
+      limit: TAMANO_PAGINA,
+      offset,
+      sortBy: { column: "name", order: "asc" },
+    });
+    if (error) throw new Error(`No se pudo listar ${carpeta}: ${error.message}`);
+    nombres.push(...data.map((archivo) => archivo.name));
+    if (data.length < TAMANO_PAGINA) return nombres;
+  }
+}
+
+export async function eliminar(rutas: string[]): Promise<void> {
+  if (rutas.length === 0) return;
+  const { error } = await bucket().remove(rutas);
+  if (error) throw new Error(`No se pudo borrar: ${error.message}`);
 }

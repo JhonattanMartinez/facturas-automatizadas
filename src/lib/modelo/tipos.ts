@@ -25,7 +25,7 @@ export type Cliente = {
 
 export type ItemFactura = {
   descripcion: string;
-  cantidad: number;
+  cantidad: number | null; // null si el OCR no la leyó ni la aritmética la pudo deducir
   precioUnitario: number;
   subtotal: number;
 };
