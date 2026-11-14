@@ -154,10 +154,20 @@ export function NuevoProceso() {
 
   return (
     <div className="flex w-full max-w-4xl flex-col gap-4">
-      <Tarjeta titulo="Nueva carga">
-        <div className="flex flex-wrap gap-3">
+      <Tarjeta titulo="Nueva carga" subtitulo="Elige la carpeta con las imágenes de las facturas (PNG o JPG).">
+        <div className="flex flex-col items-center gap-4 rounded-xl border-2 border-dashed border-borde bg-superficie-2/60 px-4 py-8 text-center">
+          <span
+            aria-hidden="true"
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-acento-suave text-2xl text-acento"
+          >
+            ⇪
+          </span>
+          <p className="text-sm text-secundario">
+            Se suben a través del servidor, que revisa cada archivo, y se procesan en segundo plano.
+          </p>
+        <div className="flex flex-wrap justify-center gap-3">
           {/* Un input de archivo sin estilo es solo texto: va oculto dentro de una etiqueta con forma de botón. */}
-          <label className={CLASE_BOTON}>
+          <label className={CLASE_BOTON_PRINCIPAL}>
             Elegir carpeta…
             <input
               type="file"
@@ -182,13 +192,19 @@ export function NuevoProceso() {
             />
           </label>
         </div>
+        </div>
 
         {archivos.length > 0 && (
           <>
-            <p>
-              {formatoEntero(archivos.length)} imágenes en «{carpeta}», {formatoTamano(tamanoTotal)}.
+            <p className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-acento-suave px-3 py-1 text-sm font-semibold text-acento-fuerte">
+                {formatoEntero(archivos.length)} imágenes
+              </span>
+              <span className="text-sm text-secundario">
+                en «{carpeta}», {formatoTamano(tamanoTotal)}
+              </span>
             </p>
-            <label className="flex flex-wrap items-center gap-2">
+            <label className="flex flex-wrap items-center gap-2 text-sm font-medium">
               Facturas por lote (0 = todo en uno)
               <input
                 type="number"
@@ -216,7 +232,7 @@ export function NuevoProceso() {
         )}
 
         {error && (
-          <p role="alert" className="text-malo">
+          <p role="alert" className="rounded-lg bg-malo-suave px-3 py-2 text-sm text-malo">
             ✕ {error}
           </p>
         )}
@@ -229,8 +245,8 @@ export function NuevoProceso() {
               const proceso = datos?.procesos.find((p) => p.id === lote.id);
               const procesadas = proceso ? totalProcesadas(proceso.metricas) : 0;
               return (
-                <li key={lote.id} className="flex flex-col gap-1">
-                  <span className="font-medium">{lote.nombre}</span>
+                <li key={lote.id} className="flex flex-col gap-1.5 rounded-lg bg-superficie-2/60 p-3">
+                  <span className="font-semibold">{lote.nombre}</span>
                   <span className="text-sm tabular-nums">
                     Subidas: {lote.subidas} de {lote.total}
                   </span>
@@ -253,8 +269,8 @@ export function NuevoProceso() {
       )}
 
       {fallos.length > 0 && !subiendo && (
-        <Tarjeta>
-          <p role="alert" className="font-medium text-malo">
+        <Tarjeta tono="peligro">
+          <p role="alert" className="font-semibold text-malo">
             ✕ {fallos.length} archivo(s) no se pudieron subir:
           </p>
           <ul className="max-h-48 overflow-y-auto">

@@ -38,7 +38,11 @@ function Medidor({
   return (
     <Tarjeta>
       <Estado tono={tono} texto={titulo} />
-      <span className="text-3xl font-semibold tabular-nums">{formatoPorcentaje(porcentaje)}</span>
+      <span
+        className={`text-4xl font-bold tracking-tight tabular-nums ${tono === "bueno" ? "text-bueno" : "text-malo"}`}
+      >
+        {formatoPorcentaje(porcentaje)}
+      </span>
       <Barra valor={cantidad} maximo={total} etiqueta={titulo} tono={tono} />
       <span className="text-sm tabular-nums text-secundario">
         {formatoEntero(cantidad)} de {formatoEntero(total)} facturas
@@ -74,7 +78,7 @@ export function PanelMetricas() {
 
   return (
     <div className="flex w-full max-w-6xl flex-col gap-4">
-      <label className="flex flex-wrap items-center gap-2">
+      <label className="flex flex-wrap items-center gap-2 text-sm font-medium">
         Ver
         <select
           value={seleccion}
@@ -113,7 +117,7 @@ export function PanelMetricas() {
         las duplicadas no cuentan porque ya estaban. Miden a la máquina, así que no cambian cuando
         una persona corrige una factura.
       </p>
-      <p>
+      <p className="rounded-lg border border-borde bg-superficie px-4 py-3 shadow-tarjeta">
         De las {formatoEntero(tasas.malas)} mal leídas, {formatoEntero(revisadas)} ya se revisaron a
         mano y {formatoEntero(pendientes)} esperan a una persona.
       </p>

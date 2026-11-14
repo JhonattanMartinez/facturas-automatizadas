@@ -1,46 +1,83 @@
 @import "tailwindcss";
 
-/* Colores por rol: el modo oscuro solo cambia estos valores. */
+/*
+ * Gama verde esmeralda. Todos los colores de la aplicación salen de aquí, por su rol:
+ * cambiar la gama es cambiar estas líneas. El modo oscuro solo redefine los valores.
+ */
 :root {
-  --background: #f6f6f3;
-  --foreground: #1b1b19;
+  --background: #f3f9f6;
+  --foreground: #0f2019;
   --superficie: #ffffff;
-  --secundario: #5c5c56;
-  --borde: #d8d8d1;
-  --acento: #0e6b6b;
+  --superficie-2: #eaf5ef;
+  --secundario: #4a6358;
+  --borde: #d2e5db;
+  --acento: #047857;
+  --acento-fuerte: #065f46;
+  --acento-suave: #d1fae5;
   --sobre-acento: #ffffff;
-  --bueno: #1a7a35;
-  --malo: #b3261e;
+  --bueno: #15803d;
+  --bueno-suave: #dcfce7;
+  --malo: #b42318;
+  --malo-suave: #fee4e2;
+  --aviso: #a15c07;
+  --aviso-suave: #fef3c7;
+  --sombra: 0 1px 2px rgb(6 40 28 / 0.05), 0 6px 16px rgb(6 40 28 / 0.06);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
   --color-secundario: var(--secundario);
   --color-borde: var(--borde);
   --color-acento: var(--acento);
+  --color-acento-fuerte: var(--acento-fuerte);
+  --color-acento-suave: var(--acento-suave);
   --color-sobre-acento: var(--sobre-acento);
   --color-bueno: var(--bueno);
+  --color-bueno-suave: var(--bueno-suave);
   --color-malo: var(--malo);
+  --color-malo-suave: var(--malo-suave);
+  --color-aviso: var(--aviso);
+  --color-aviso-suave: var(--aviso-suave);
+  --shadow-tarjeta: var(--sombra);
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #121211;
-    --foreground: #ededea;
-    --superficie: #1d1d1b;
-    --secundario: #a8a8a0;
-    --borde: #3a3a36;
-    --acento: #5cc0c0;
-    --sobre-acento: #0c1414;
-    --bueno: #5fcf80;
-    --malo: #f2867d;
+    --background: #06120d;
+    --foreground: #e2f2ea;
+    --superficie: #0c1d16;
+    --superficie-2: #11281f;
+    --secundario: #9bb8aa;
+    --borde: #1e3a2e;
+    --acento: #34d399;
+    --acento-fuerte: #6ee7b7;
+    --acento-suave: #0b3a2a;
+    --sobre-acento: #04261a;
+    --bueno: #4ade80;
+    --bueno-suave: #0f3a22;
+    --malo: #f87171;
+    --malo-suave: #3f1513;
+    --aviso: #fbbf24;
+    --aviso-suave: #3a2a0a;
+    --sombra: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 16px rgb(0 0 0 / 0.35);
   }
 }
 
 body {
-  background: var(--background);
+  /* Un brillo verde muy suave arriba da profundidad sin competir con el contenido. */
+  background:
+    radial-gradient(1200px 400px at 50% -120px, var(--acento-suave), transparent 70%),
+    var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--acento-suave);
+  color: var(--foreground);
 }

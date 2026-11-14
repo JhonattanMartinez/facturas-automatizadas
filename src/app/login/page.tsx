@@ -5,9 +5,8 @@ import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { useState, type FormEvent } from "react";
 import { autenticacionCliente } from "@/lib/firebase/cliente";
 import { cargarPagina } from "@/lib/navegacion";
+import { CLASE_BOTON_PRINCIPAL, CLASE_CAMPO, Logotipo } from "@/componentes/ui";
 
-const claseCampo =
-  "rounded border border-zinc-400 bg-transparent px-3 py-2 dark:border-zinc-600";
 
 function mensajeDeError(error: unknown): string {
   if (
@@ -55,44 +54,63 @@ export default function PaginaLogin() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
-      <form onSubmit={entrar} className="flex w-full max-w-sm flex-col gap-4">
-        <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
-        <label className="flex flex-col gap-1">
-          Correo
-          <input
-            type="email"
-            required
-            autoComplete="username"
-            value={correo}
-            onChange={(e) => setCorreo(e.target.value)}
-            className={claseCampo}
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          Contraseña
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={clave}
-            onChange={(e) => setClave(e.target.value)}
-            className={claseCampo}
-          />
-        </label>
-        {error && (
-          <p role="alert" className="text-red-700 dark:text-red-400">
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={enviando}
-          className="rounded bg-foreground px-3 py-2 font-medium text-background disabled:opacity-50"
-        >
-          {enviando ? "Entrando…" : "Entrar"}
-        </button>
-      </form>
+    <main className="flex flex-1 items-center justify-center p-4 sm:p-8">
+      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl border border-borde bg-superficie shadow-tarjeta md:grid-cols-2">
+        <section className="flex flex-col justify-between gap-8 bg-gradient-to-br from-acento-fuerte to-acento p-8 text-sobre-acento">
+          <div className="flex items-center gap-3">
+            <Logotipo tamano={40} />
+            <span className="text-lg font-bold tracking-tight">Procesador de facturas</span>
+          </div>
+          <div className="flex flex-col gap-3">
+            <h2 className="text-2xl font-bold leading-tight sm:text-3xl">
+              Lee, valida y organiza tus facturas automáticamente.
+            </h2>
+            <ul className="flex flex-col gap-2 text-sm opacity-90">
+              <li>✓ OCR de miles de facturas en segundo plano</li>
+              <li>✓ Validación de NIT, IVA y totales</li>
+              <li>✓ Revisión manual y un Excel por lote</li>
+            </ul>
+          </div>
+          <p className="text-xs opacity-75">Tendencias en desarrollo de software · automatización</p>
+        </section>
+
+        <form onSubmit={entrar} className="flex flex-col justify-center gap-5 p-8">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold tracking-tight">Iniciar sesión</h1>
+            <p className="text-sm text-secundario">Solo pueden entrar las cuentas autorizadas.</p>
+          </div>
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Correo
+            <input
+              type="email"
+              required
+              autoComplete="username"
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
+              className={CLASE_CAMPO}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Contraseña
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={clave}
+              onChange={(e) => setClave(e.target.value)}
+              className={CLASE_CAMPO}
+            />
+          </label>
+          {error && (
+            <p role="alert" className="rounded-lg bg-malo-suave px-3 py-2 text-sm text-malo">
+              ✕ {error}
+            </p>
+          )}
+          <button type="submit" disabled={enviando} className={`${CLASE_BOTON_PRINCIPAL} py-2.5`}>
+            {enviando ? "Entrando…" : "Entrar"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

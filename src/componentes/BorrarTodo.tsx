@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cargarPagina } from "@/lib/navegacion";
-import { CLASE_BOTON, CLASE_CAMPO, Tarjeta } from "./ui";
+import { CLASE_BOTON, CLASE_BOTON_PELIGRO, CLASE_CAMPO, Tarjeta } from "./ui";
 
 const PALABRA = "BORRAR";
 
@@ -43,15 +43,15 @@ export function BorrarTodo() {
 
   if (!abierto) {
     return (
-      <button type="button" onClick={() => setAbierto(true)} className={`self-start ${CLASE_BOTON}`}>
+      <button type="button" onClick={() => setAbierto(true)} className={`self-start ${CLASE_BOTON_PELIGRO}`}>
         Borrar todos los datos…
       </button>
     );
   }
 
   return (
-    <Tarjeta titulo="Borrar todos los datos">
-      <p className="text-malo">
+    <Tarjeta titulo="Borrar todos los datos" tono="peligro">
+      <p className="rounded-lg bg-malo-suave px-3 py-2 text-sm text-malo">
         ✕ Esto borra todas las facturas, clientes, lotes, imágenes y Excel, de todos los usuarios.
         No se puede deshacer y gasta el límite diario de borrados de Firestore.
       </p>
@@ -76,7 +76,7 @@ export function BorrarTodo() {
         </p>
       )}
       <div className="flex flex-wrap gap-3">
-        <button type="button" onClick={borrar} disabled={!permitido} className={CLASE_BOTON}>
+        <button type="button" onClick={borrar} disabled={!permitido} className={CLASE_BOTON_PELIGRO}>
           {borrando ? "Borrando…" : "Borrar definitivamente"}
         </button>
         <button type="button" onClick={() => setAbierto(false)} className={CLASE_BOTON}>

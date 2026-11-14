@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cargarPagina } from "@/lib/navegacion";
 import { Motor } from "./Motor";
+import { Logotipo } from "./ui";
 
 const ENLACES = [
   { ruta: "/", texto: "Procesar facturas" },
@@ -41,28 +42,55 @@ export function MenuSuperior() {
   }
 
   return (
-    <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-borde bg-superficie px-4 py-3">
-      <nav className="flex flex-wrap gap-4">
-        {ENLACES.map(({ ruta, texto }) => {
-          const activo = ruta === "/" ? rutaActual === "/" : rutaActual.startsWith(ruta);
-          return (
-            <Link
-              key={ruta}
-              href={ruta}
-              aria-current={activo ? "page" : undefined}
-              className={activo ? "font-semibold text-acento underline" : "text-foreground"}
-            >
-              {texto}
-            </Link>
-          );
-        })}
-      </nav>
-      <Motor />
-      <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
-        {correo && <span className="text-secundario">{correo}</span>}
-        <button type="button" onClick={cerrarSesion} className="cursor-pointer underline">
-          Cerrar sesión
-        </button>
+    <header className="sticky top-0 z-10 border-b border-borde bg-superficie/90 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+        <Link href="/" className="flex items-center gap-2.5">
+          <Logotipo />
+          <span className="font-bold tracking-tight">Procesador de facturas</span>
+        </Link>
+
+        <nav className="flex flex-wrap gap-1">
+          {ENLACES.map(({ ruta, texto }) => {
+            const activo = ruta === "/" ? rutaActual === "/" : rutaActual.startsWith(ruta);
+            return (
+              <Link
+                key={ruta}
+                href={ruta}
+                aria-current={activo ? "page" : undefined}
+                className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                  activo
+                    ? "bg-acento-suave text-acento-fuerte"
+                    : "text-secundario hover:bg-superficie-2 hover:text-foreground"
+                }`}
+              >
+                {texto}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <Motor />
+
+        <div className="ml-auto flex items-center gap-3 text-sm">
+          {correo && (
+            <span className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-acento text-sm font-bold uppercase text-sobre-acento"
+              >
+                {correo[0]}
+              </span>
+              <span className="hidden text-secundario md:inline">{correo}</span>
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={cerrarSesion}
+            className="cursor-pointer rounded-lg px-2.5 py-1.5 font-medium text-secundario transition hover:bg-superficie-2 hover:text-foreground"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </div>
     </header>
   );

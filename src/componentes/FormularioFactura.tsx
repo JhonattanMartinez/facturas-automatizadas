@@ -251,7 +251,7 @@ export function FormularioFactura({ hash }: { hash: string }) {
             +
           </button>
         </div>
-        <div className="max-h-[75vh] overflow-auto rounded border border-borde">
+        <div className="max-h-[75vh] overflow-auto rounded-lg border border-borde bg-superficie-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- la imagen sale de una ruta privada con sesión; next/image la pediría sin cookie */}
           <img src={rutaImagen} alt={`Factura ${factura.archivo}`} style={{ width: `${zoom * 100}%`, maxWidth: "none" }} />
         </div>
@@ -259,7 +259,7 @@ export function FormularioFactura({ hash }: { hash: string }) {
 
       <Tarjeta titulo={factura.corregidaManualmente ? "Editar revisión" : "Revisar factura"}>
         {factura.motivos.length > 0 && (
-          <div className="text-sm">
+          <div className="rounded-lg bg-aviso-suave p-3 text-sm">
             <p className="font-medium">La máquina la envió a revisión porque:</p>
             <ul className="list-inside list-disc text-secundario">
               {factura.motivos.map((motivo) => (
@@ -287,7 +287,7 @@ export function FormularioFactura({ hash }: { hash: string }) {
             const precio = aNumero(fila.precioUnitario);
             const subtotal = Number.isFinite(cantidad * precio) ? cantidad * precio : null;
             return (
-              <div key={i} className="grid grid-cols-2 gap-2 border-b border-borde pb-3">
+              <div key={i} className="grid grid-cols-2 gap-2 rounded-lg bg-superficie-2/60 p-3">
                 <Campo etiqueta="Descripción" ancho="col-span-2" valor={fila.descripcion} alCambiar={(v) => cambiarItem(i, { descripcion: v })} />
                 <Campo etiqueta="Cantidad" valor={fila.cantidad} alCambiar={(v) => cambiarItem(i, { cantidad: v })} />
                 <Campo etiqueta="Precio unitario" valor={fila.precioUnitario} alCambiar={(v) => cambiarItem(i, { precioUnitario: v })} />
@@ -335,7 +335,7 @@ export function FormularioFactura({ hash }: { hash: string }) {
         )}
 
         {motivos.length > 0 && (
-          <div className="flex flex-col gap-2 rounded border border-malo p-3 text-sm">
+          <div className="flex flex-col gap-2 rounded-lg border border-malo/40 bg-malo-suave p-3 text-sm">
             <p className="font-medium text-malo">✕ Esto no cuadra:</p>
             <ul className="list-inside list-disc">
               {motivos.map((motivo) => (
